@@ -1,6 +1,5 @@
-<<<<<<< HEAD
+
 # Team-26
-=======
 # CSI - 3D Bunny Robot with Webcam Background
 
 A Three.js application that renders a 3D bunny robot model over a live webcam feed.
