@@ -10,5 +10,11 @@
   },
   "devDependencies": {
     "vite": "^7.2.4"
+  },
+  "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "three": "^0.182.0",
+    "three-fbx-loader": "^1.0.3"
   }
 }

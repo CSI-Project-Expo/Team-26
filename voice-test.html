@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Talking Lexi - Voice Test</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #1a1a1a;
+        color: white;
+      }
+      
+      #controls {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 20px;
+        border-radius: 15px;
+        min-width: 300px;
+        z-index: 1000;
+      }
+      
+      h2 {
+        margin: 0 0 15px 0;
+        font-size: 18px;
+      }
+      
+      button {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+      
+      #startBtn {
+        background: #4CAF50;
+        color: white;
+      }
+      
+      #startBtn.listening {
+        background: #f44336;
+      }
+      
+      #status {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      
+      #transcript {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+        min-height: 80px;
+        font-size: 13px;
+        color: #aaa;
+        margin-bottom: 10px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+      
+      #commands {
+        font-size: 12px;
+        color: #888;
+        line-height: 1.8;
+      }
+      
+      .final {
+        color: white;
+        font-weight: bold;
+      }
+      
+      .interim {
+        color: #aaa;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    
+    <div id="controls">
+      <h2>🎤 Voice Commands</h2>
+      <button id="startBtn">Start Listening</button>
+      <div id="status">🔴 Not listening</div>
+      <div id="transcript"><em>Speech will appear here...</em></div>
+      <div id="commands">
+        <strong>Try saying:</strong><br>
+        • "hello" or "hi"<br>
+        • "wave"<br>
+        • "jump"<br>
+        • "spin"<br>
+        • "dance"
+      </div>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+    
+    <script>
+      // Web Speech API Test
+      let recognition;
+      let isListening = false;
+      
+      const startBtn = document.getElementById('startBtn');
+      const status = document.getElementById('status');
+      const transcript = document.getElementById('transcript');
+      
+      // Check browser support
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        status.textContent = '❌ Speech recognition not supported';
+        status.style.background = 'rgba(255, 50, 50, 0.3)';
+        transcript.innerHTML = '<em style="color: #ff5555;">Please use Chrome, Edge, or Safari</em>';
+        startBtn.disabled = true;
+      } else {
+        setupVoiceRecognition();
+      }
+      
+      function setupVoiceRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        
+        let finalText = '';
+        
+        recognition.onstart = () => {
+          isListening = true;
+          startBtn.textContent = '🔴 Stop Listening';
+          startBtn.classList.add('listening');
+          status.textContent = '🟢 Listening...';
+          status.style.background = 'rgba(76, 175, 80, 0.3)';
+          transcript.innerHTML = '<em style="color: #4CAF50;">Listening...</em>';
+          console.log('✅ Started');
+        };
+        
+        recognition.onresult = (event) => {
+          let interimText = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const text = event.results[i][0].transcript;
+            
+            if (event.results[i].isFinal) {
+              finalText += text + ' ';
+              console.log('🗣️', text);
+              detectCommand(text.toLowerCase());
+            } else {
+              interimText += text;
+            }
+          }
+          
+          transcript.innerHTML = `
+            <div class="final">${finalText}</div>
+            <div class="interim">${interimText}</div>
+          `;
+        };
+        
+        recognition.onerror = (event) => {
+          console.error('❌', event.error);
+          if (event.error === 'not-allowed') {
+            status.textContent = '❌ Microphone blocked';
+            status.style.background = 'rgba(255, 50, 50, 0.3)';
+            isListening = false;
+            startBtn.textContent = 'Start Listening';
+            startBtn.classList.remove('listening');
+          } else if (event.error !== 'no-speech') {
+            status.textContent = `⚠️ ${event.error}`;
+          }
+        };
+        
+        recognition.onend = () => {
+          console.log('🔴 Ended');
+          if (isListening) {
+            setTimeout(() => {
+              try {
+                recognition.start();
+              } catch(e) {
+                isListening = false;
+                startBtn.textContent = 'Start Listening';
+                startBtn.classList.remove('listening');
+                status.textContent = '🔴 Stopped';
+              }
+            }, 100);
+          } else {
+            startBtn.textContent = 'Start Listening';
+            startBtn.classList.remove('listening');
+            status.textContent = '🔴 Stopped';
+          }
+        };
+        
+        startBtn.onclick = () => {
+          if (isListening) {
+            recognition.stop();
+            isListening = false;
+          } else {
+            try {
+              recognition.start();
+            } catch(e) {
+              console.error('Failed:', e);
+            }
+          }
+        };
+      }
+      
+      function detectCommand(text) {
+        let cmd = '';
+        let msg = '';
+        
+        if (text.includes('hello') || text.includes('hi')) {
+          cmd = 'hello';
+          msg = '👋 Hello!';
+        } else if (text.includes('wave')) {
+          cmd = 'wave';
+          msg = '👋 Waving!';
+        } else if (text.includes('jump')) {
+          cmd = 'jump';
+          msg = '⬆️ Jumping!';
+        } else if (text.includes('spin')) {
+          cmd = 'spin';
+          msg = '🌀 Spinning!';
+        } else if (text.includes('dance')) {
+          cmd = 'dance';
+          msg = '💃 Dancing!';
+        }
+        
+        if (cmd) {
+          status.textContent = msg;
+          status.style.background = 'rgba(33, 150, 243, 0.3)';
+          console.log('✅ Command:', cmd);
+          
+          // Trigger animation
+          window.triggerAnimation && window.triggerAnimation(cmd);
+          
+          setTimeout(() => {
+            if (isListening) {
+              status.textContent = '🟢 Listening...';
+              status.style.background = 'rgba(76, 175, 80, 0.3)';
+            }
+          }, 2000);
+        }
+      }
+    </script>
+  </body>
+</html>
